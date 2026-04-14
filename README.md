@@ -1,131 +1,148 @@
 # claude-code-hooks
 
-A plug-and-play collection of safety and productivity hooks for [Claude Code](https://code.claude.com).
+> Claude deleted my entire `src/` folder while refactoring.
+> It force-pushed over my team's work on `main`.
+> It committed my `.env` file with real API keys.
+>
+> All in the same week.
 
-One install command. Immediate protection. No configuration required.
-
----
-
-## Why
-
-Claude Code is powerful. That power comes with risk. It can and will:
-
-- Run `rm -rf` on the wrong directory
-- Force-push over your colleagues' work on `main`
-- Write API keys into files that end up committed
-- Silently skip formatting, leaving inconsistent code
-
-These hooks intercept Claude before damage happens.
-
----
-
-## Install
+These hooks make sure that never happens to you.
 
 ```bash
 git clone https://github.com/OutBlade/claude-code-hooks
-cd claude-code-hooks
-bash install.sh
+cd claude-code-hooks && bash install.sh
 ```
 
-Then restart Claude Code.
-
-Requires: Python 3 (pre-installed on macOS/Linux; [download for Windows](https://python.org))
+Restart Claude Code. Done.
 
 ---
 
-## What's included
+## What gets installed
 
-### bash-guard
+Six shell scripts that sit between Claude and your machine. Each one intercepts a specific class of damage before it happens.
 
-**Event:** `PreToolUse` / `Bash`
+| Hook | Triggers on | What it does |
+|---|---|---|
+| `bash-guard` | every shell command | hard-blocks `rm -rf /`, disk format, fork bombs, `DROP DATABASE`, pipe-to-shell |
+| `git-guard` | every git command | hard-blocks force-push to main, `reset --hard HEAD~N`, deleting protected branches |
+| `secret-guard` | every file write | warns before writing `.env`, `*.pem`, `id_rsa`, or content that looks like an API key |
+| `auto-format` | every file edit | runs prettier / black / gofmt / rustfmt automatically |
+| `notify` | task complete | desktop notification so you can look away while Claude works |
+| `session-log` | everything | daily audit log of every tool call at `~/.claude/logs/` |
 
-Blocks commands that cannot be undone:
-
-| Blocked pattern | Reason |
-|---|---|
-| `rm -rf /`, `rm -rf ~`, `rm -rf .` | Filesystem destruction |
-| `mkfs.*`, `dd if=... of=/dev/sd*` | Disk formatting / raw writes |
-| `:(){:\|:&};:` | Fork bomb |
-| `chmod -R 777 /` | Mass permission change |
-| `shutdown`, `poweroff`, `halt` | System shutdown |
-| `DROP DATABASE`, `DROP SCHEMA ... CASCADE` | Database destruction |
-| `curl ... \| bash` | Pipe-to-shell (warning only) |
-
-When blocked, Claude receives an explanation and must find a safer approach.
-
-### git-guard
-
-**Event:** `PreToolUse` / `Bash`
-
-| Blocked | Warning only |
-|---|---|
-| Force-push to `main`/`master` | Force-push to any branch |
-| `git reset --hard HEAD~N` (drops commits) | `git reset --hard HEAD` |
-| Delete protected remote branches | `git commit --amend` |
-| | `git clean -fd` |
-
-### secret-guard
-
-**Event:** `PreToolUse` / `Edit`, `Write`
-
-Warns Claude before writing files that contain sensitive data. Detects:
-
-- Filename patterns: `.env`, `*.pem`, `*.key`, `credentials.json`, `id_rsa`, `kubeconfig`, ...
-- Content patterns: OpenAI keys (`sk-...`), Anthropic keys, AWS access keys (`AKIA...`), GitHub tokens (`ghp_...`), Stripe live keys, private key blocks, hardcoded passwords
-
-Does not block (Claude may legitimately create placeholder `.env` files), but adds a visible warning so Claude can add `.gitignore` entries and inform you.
-
-### auto-format
-
-**Event:** `PostToolUse` / `Edit`, `Write`
-
-Runs the right formatter after every file edit, automatically:
-
-| Extension | Formatter |
-|---|---|
-| `.js`, `.ts`, `.tsx`, `.css`, `.html`, `.json`, `.md`, ... | `prettier` |
-| `.py` | `ruff` or `black` |
-| `.go` | `gofmt` |
-| `.rs` | `rustfmt` |
-| `.sh` | `shfmt` |
-| `.lua` | `stylua` |
-
-Silently skips if no formatter is installed. Claude sees a confirmation when formatting runs.
-
-### notify
-
-**Event:** `Stop`
-
-Desktop notification when Claude finishes a task — so you can switch to another window and come back when it's done.
-
-Works on Windows (PowerShell balloon), macOS (osascript), and Linux (notify-send).
-
-### session-log
-
-**Event:** `PostToolUse` / all tools
-
-Appends every tool call to `~/.claude/logs/YYYY-MM-DD.log`:
-
-```
-[14:32:11] [a1b2c3d4] Bash                 [success] git status
-[14:32:14] [a1b2c3d4] Edit                 [success] src/auth/middleware.ts
-[14:32:18] [a1b2c3d4] Bash                 [success] npm test -- --testPathPattern=auth
-```
-
-Useful for reviewing what Claude did when you weren't watching, or for debugging a failed session.
+Hard-blocked means Claude cannot proceed. It receives the reason and must find a different approach. Warned means Claude gets context injected and can make a judgment call.
 
 ---
 
-## Selective install
+## bash-guard in detail
 
-Don't want all hooks? Copy individual scripts manually:
+These commands are blocked outright, with no override:
+
+```
+rm -rf /          rm -rf ~          rm -rf .
+mkfs.*            dd if=... of=/dev/sd*
+:(){:|:&};:       chmod -R 777 /
+DROP DATABASE     DROP SCHEMA ... CASCADE
+shutdown          poweroff          halt
+```
+
+These trigger a warning (Claude sees it, but can proceed):
+
+```
+curl <url> | bash        sudo ... > /etc/
+```
+
+---
+
+## git-guard in detail
+
+Blocked:
+
+```
+git push --force origin main      git push -f origin master
+git reset --hard HEAD~3           git push origin :main
+```
+
+Warning only (Claude is told, but can proceed if appropriate):
+
+```
+git push --force <any other branch>
+git commit --amend
+git reset --hard HEAD
+git clean -fd
+```
+
+---
+
+## secret-guard in detail
+
+Warns before writing files matching these names:
+
+```
+.env  .env.*  credentials.json  secrets.yaml  *.pem  *.key  *.p12
+id_rsa  id_ed25519  kubeconfig  terraform.tfvars  .netrc  .npmrc
+```
+
+Warns if file content matches these patterns:
+
+```
+sk-...                OpenAI key
+sk-ant-...            Anthropic key
+AKIA...               AWS Access Key ID
+ghp_...               GitHub personal access token
+xoxb-...              Slack bot token
+sk_live_...           Stripe live secret key
+-----BEGIN * PRIVATE KEY-----
+password = "..."      api_key = "..."
+```
+
+Does not block — Claude may legitimately create a `.env.example` with placeholders. But it always sees the warning and will add `.gitignore` entries.
+
+---
+
+## auto-format
+
+Runs after every `Edit` or `Write` tool call. Detects the right formatter from the file extension:
+
+```
+.js .ts .tsx .jsx .css .html .json .yaml .md   →  prettier
+.py                                              →  ruff, then black
+.go                                              →  gofmt
+.rs                                              →  rustfmt
+.sh                                              →  shfmt
+.lua                                             →  stylua
+```
+
+Silently skips if no formatter is installed. No configuration needed.
+
+---
+
+## session-log
+
+Every tool call appended to `~/.claude/logs/YYYY-MM-DD.log`:
+
+```
+[09:14:02] [3f8a1c2b] Bash                 [success] git checkout -b feature/auth
+[09:14:09] [3f8a1c2b] Write                [success] src/auth/middleware.ts
+[09:14:13] [3f8a1c2b] Bash                 [success] npm test -- --testPathPattern=auth
+[09:14:31] [3f8a1c2b] Edit                 [success] src/auth/middleware.ts
+[09:14:35] [3f8a1c2b] Bash                 [error  ] tsc --noEmit
+```
+
+One log per day. Survives session boundaries. Useful for understanding what Claude actually did while you were away.
+
+---
+
+## Pick only what you need
+
+Install individual hooks without the script:
 
 ```bash
 cp hooks/bash-guard.sh ~/.claude/hooks/
 chmod +x ~/.claude/hooks/bash-guard.sh
 ```
 
-Then add to `~/.claude/settings.json`:
+Add to `~/.claude/settings.json`:
 
 ```json
 {
@@ -144,52 +161,47 @@ Then add to `~/.claude/settings.json`:
 
 ---
 
+## Write your own
+
+Every hook is a shell script. It reads JSON from stdin and exits with:
+
+- `0` — allow (optionally output a JSON `systemMessage` to inject context for Claude)
+- `2` — block (write the reason to stderr; Claude will read it and adjust)
+
+```bash
+#!/usr/bin/env bash
+INPUT=$(cat)
+COMMAND=$(echo "$INPUT" | python3 -c "
+import sys, json
+print(json.load(sys.stdin).get('tool_input', {}).get('command', ''))
+")
+
+if echo "$COMMAND" | grep -q "dangerous-thing"; then
+  echo "Blocked: explain why here" >&2
+  exit 2
+fi
+```
+
+Full API reference: [Claude Code hooks docs](https://docs.anthropic.com/en/docs/claude-code/hooks)
+
+---
+
 ## Uninstall
 
 ```bash
 bash uninstall.sh
 ```
 
-Removes hook scripts and cleans settings.json. Leaves your logs intact.
+Removes hook scripts, cleans settings.json, leaves logs.
 
 ---
 
-## Writing your own hook
+## Requirements
 
-Every hook is a shell script that reads JSON from stdin and exits with:
-
-- `0` — proceed (optionally output JSON to add context for Claude)
-- `2` — block (write explanation to stderr; Claude will see it)
-
-Minimal example — block a specific tool:
-
-```bash
-#!/usr/bin/env bash
-INPUT=$(cat)
-COMMAND=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tool_input',{}).get('command',''))")
-
-if echo "$COMMAND" | grep -q "my-dangerous-thing"; then
-  echo "Blocked: reason here" >&2
-  exit 2
-fi
-```
-
-See the [Claude Code hooks documentation](https://docs.anthropic.com/en/docs/claude-code/hooks) for the full API reference.
+Python 3. Pre-installed on macOS and Linux. [Download for Windows.](https://python.org)
 
 ---
 
-## Contributing
+## Related
 
-Pull requests welcome. Each hook should:
-
-- Be a single self-contained shell script
-- Exit 0 silently on the happy path (no unnecessary noise)
-- Use `python3` for JSON parsing (available on all platforms)
-- Include a comment header explaining the event, matcher, and behavior
-- Not require external tools beyond what ships with the OS
-
----
-
-## Related projects
-
-- [claude-mem](https://github.com/OutBlade/claude-mem) — persistent cross-session memory for Claude Code
+[claude-mem](https://github.com/OutBlade/claude-mem) — persistent cross-session memory for Claude Code
