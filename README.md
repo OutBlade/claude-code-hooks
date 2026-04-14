@@ -1,4 +1,58 @@
-# claude-code-hooks
+<div align="center">
+
+<img src="assets/logo.svg" width="480" alt="claude-code-hooks"/>
+
+<br/>
+
+<p>
+<a href="docs/README_CN.md">CN 中文</a> •
+<a href="docs/README_TW.md">TW 繁體中文</a> •
+<a href="docs/README_JP.md">JP 日本語</a> •
+<a href="docs/README_PT.md">PT Português</a> •
+<a href="docs/README_KR.md">KR 한국어</a> •
+<a href="docs/README_ES.md">ES Español</a> •
+<a href="docs/README_DE.md">DE Deutsch</a> •
+<a href="docs/README_FR.md">FR Français</a> •
+<a href="docs/README_RU.md">RU Русский</a> •
+<a href="docs/README_AR.md">AR العربية</a> •
+<a href="docs/README_HI.md">IN हिन्दी</a> •
+<a href="docs/README_IT.md">IT Italiano</a>
+</p>
+
+**Plug-and-play safety hooks for [Claude Code](https://code.claude.com).**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Hooks: 6](https://img.shields.io/badge/hooks-6-orange.svg)](#whats-installed)
+[![Shell: bash](https://img.shields.io/badge/shell-bash-blue.svg)](#requirements)
+[![Requires: Python 3](https://img.shields.io/badge/python-3-blue.svg)](https://python.org)
+[![Mentioned in Awesome Claude Code](https://awesome.re/mentioned-badge.svg)](https://github.com/heshengtao/awesome-claude-code)
+
+<br/>
+
+<table>
+<tr>
+<td align="center">
+<img src="assets/demo.svg" width="420" alt="bash-guard blocking a destructive command"/>
+</td>
+<td align="center">
+<img src="https://api.star-history.com/svg?repos=OutBlade/claude-code-hooks&type=Date" width="420" alt="Star history"/>
+</td>
+</tr>
+</table>
+
+<br/>
+
+<a href="#whats-installed">What's installed</a> •
+<a href="#bash-guard-in-detail">bash-guard</a> •
+<a href="#git-guard-in-detail">git-guard</a> •
+<a href="#secret-guard-in-detail">secret-guard</a> •
+<a href="#auto-format">auto-format</a> •
+<a href="#write-your-own">Write your own</a> •
+<a href="#requirements">Requirements</a>
+
+</div>
+
+---
 
 > Claude deleted my entire `src/` folder while refactoring.
 > It force-pushed over my team's work on `main`.
@@ -6,7 +60,7 @@
 >
 > All in the same week.
 
-These hooks make sure that never happens to you.
+These hooks sit between Claude and your machine. They intercept damage before it happens.
 
 ```bash
 git clone https://github.com/OutBlade/claude-code-hooks
@@ -17,9 +71,9 @@ Restart Claude Code. Done.
 
 ---
 
-## What gets installed
+## What's installed
 
-Six shell scripts that sit between Claude and your machine. Each one intercepts a specific class of damage before it happens.
+Six shell scripts registered as Claude Code hooks. Each one targets a specific class of damage.
 
 | Hook | Triggers on | What it does |
 |---|---|---|
@@ -30,7 +84,8 @@ Six shell scripts that sit between Claude and your machine. Each one intercepts 
 | `notify` | task complete | desktop notification so you can look away while Claude works |
 | `session-log` | everything | daily audit log of every tool call at `~/.claude/logs/` |
 
-Hard-blocked means Claude cannot proceed. It receives the reason and must find a different approach. Warned means Claude gets context injected and can make a judgment call.
+**Hard-blocked** means Claude cannot proceed. It receives the reason and must find a different approach.
+**Warned** means Claude gets context injected and can make a judgment call.
 
 ---
 
@@ -46,7 +101,7 @@ DROP DATABASE     DROP SCHEMA ... CASCADE
 shutdown          poweroff          halt
 ```
 
-These trigger a warning (Claude sees it, but can proceed):
+These trigger a warning:
 
 ```
 curl <url> | bash        sudo ... > /etc/
@@ -63,7 +118,7 @@ git push --force origin main      git push -f origin master
 git reset --hard HEAD~3           git push origin :main
 ```
 
-Warning only (Claude is told, but can proceed if appropriate):
+Warning only:
 
 ```
 git push --force <any other branch>
@@ -96,13 +151,13 @@ sk_live_...           Stripe live secret key
 password = "..."      api_key = "..."
 ```
 
-Does not block — Claude may legitimately create a `.env.example` with placeholders. But it always sees the warning and will add `.gitignore` entries.
+Does not block outright — Claude may legitimately create a `.env.example` with placeholders. But it always sees the warning and will add `.gitignore` entries.
 
 ---
 
 ## auto-format
 
-Runs after every `Edit` or `Write` tool call. Detects the right formatter from the file extension:
+Runs after every `Edit` or `Write` call. Detects the right formatter from the file extension:
 
 ```
 .js .ts .tsx .jsx .css .html .json .yaml .md   →  prettier
@@ -129,13 +184,11 @@ Every tool call appended to `~/.claude/logs/YYYY-MM-DD.log`:
 [09:14:35] [3f8a1c2b] Bash                 [error  ] tsc --noEmit
 ```
 
-One log per day. Survives session boundaries. Useful for understanding what Claude actually did while you were away.
+One log per day. Survives session boundaries.
 
 ---
 
 ## Pick only what you need
-
-Install individual hooks without the script:
 
 ```bash
 cp hooks/bash-guard.sh ~/.claude/hooks/
@@ -182,7 +235,7 @@ if echo "$COMMAND" | grep -q "dangerous-thing"; then
 fi
 ```
 
-Full API reference: [Claude Code hooks docs](https://docs.anthropic.com/en/docs/claude-code/hooks)
+Full API reference: [Claude Code hooks documentation](https://docs.anthropic.com/en/docs/claude-code/hooks)
 
 ---
 
@@ -192,7 +245,7 @@ Full API reference: [Claude Code hooks docs](https://docs.anthropic.com/en/docs/
 bash uninstall.sh
 ```
 
-Removes hook scripts, cleans settings.json, leaves logs.
+Removes hook scripts, cleans `settings.json`, leaves logs intact.
 
 ---
 
