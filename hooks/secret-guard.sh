@@ -10,10 +10,13 @@
 
 set -euo pipefail
 
+PYTHON=$(for cmd in python3 python py; do p=$(command -v "$cmd" 2>/dev/null) && "$p" -c "import sys; assert sys.version_info[0]==3" 2>/dev/null && echo "$p" && break; done)
+[ -z "$PYTHON" ] && exit 0
+
 INPUT=$(cat)
 
 parse_python() {
-  echo "$INPUT" | python3 - <<'PYEOF'
+  echo "$INPUT" | "$PYTHON" - <<'PYEOF'
 import sys, json, re, os
 
 d = json.load(sys.stdin)

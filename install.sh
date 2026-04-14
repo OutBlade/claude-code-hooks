@@ -24,12 +24,25 @@ echo "claude-code-hooks installer"
 echo "==========================="
 echo ""
 
-# 1. Check dependencies
-if ! command -v python3 &>/dev/null; then
+# 1. Check dependencies — verify Python actually runs (Windows Store stubs don't)
+find_python() {
+  for cmd in python3 python py; do
+    local p
+    p=$(command -v "$cmd" 2>/dev/null) || continue
+    # Test it actually executes
+    if "$p" -c "import sys; assert sys.version_info[0]==3" 2>/dev/null; then
+      echo "$p"; return 0
+    fi
+  done
+  return 1
+}
+PYTHON=$(find_python || echo "")
+if [ -z "$PYTHON" ]; then
   err "Python 3 is required but not found. Install it from https://python.org"
   exit 1
 fi
-ok "Python 3 found: $(python3 --version)"
+PY_VER=$("$PYTHON" --version 2>&1)
+ok "Python found: $PY_VER ($PYTHON)"
 
 # 2. Create hooks directory
 mkdir -p "$HOOKS_DEST"
@@ -62,7 +75,7 @@ done
 # 4. Merge settings.json
 echo ""
 echo "Updating settings.json ..."
-python3 "$REPO_DIR/merge-settings.py"
+"$PYTHON" "$REPO_DIR/merge-settings.py"
 
 # 5. Create log directory
 mkdir -p "$HOME/.claude/logs"

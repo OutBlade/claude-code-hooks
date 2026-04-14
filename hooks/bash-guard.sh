@@ -8,11 +8,14 @@
 
 set -euo pipefail
 
+PYTHON=$(for cmd in python3 python py; do p=$(command -v "$cmd" 2>/dev/null) && "$p" -c "import sys; assert sys.version_info[0]==3" 2>/dev/null && echo "$p" && break; done)
+[ -z "$PYTHON" ] && exit 0
+
 INPUT=$(cat)
 
 # Extract fields using Python3 (reliable cross-platform JSON parsing)
 parse() {
-  echo "$INPUT" | python3 -c "
+  echo "$INPUT" | $PYTHON -c "
 import sys, json
 d = json.load(sys.stdin)
 ti = d.get('tool_input', {})
@@ -86,7 +89,7 @@ echo "$COMMAND" | grep -qiP 'drop\s+schema\s+\w+.*cascade' \
 # --- Soft warnings (exit 0 + systemMessage shown to Claude) -------------------
 
 warn() {
-  python3 -c "
+  $PYTHON -c "
 import json, sys
 print(json.dumps({'continue': True, 'systemMessage': sys.argv[1]}))
 " "bash-guard warning: $1"

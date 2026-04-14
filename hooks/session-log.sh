@@ -7,6 +7,9 @@
 
 set -euo pipefail
 
+PYTHON=$(for cmd in python3 python py; do p=$(command -v "$cmd" 2>/dev/null) && "$p" -c "import sys; assert sys.version_info[0]==3" 2>/dev/null && echo "$p" && break; done)
+[ -z "$PYTHON" ] && exit 0
+
 INPUT=$(cat)
 
 LOG_DIR="$HOME/.claude/logs"
@@ -16,7 +19,7 @@ DATE=$(date +%Y-%m-%d)
 TIME=$(date +%H:%M:%S)
 LOG_FILE="$LOG_DIR/$DATE.log"
 
-python3 - <<PYEOF
+"$PYTHON" - <<PYEOF
 import sys, json, os, re
 
 raw = """$INPUT"""

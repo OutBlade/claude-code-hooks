@@ -8,10 +8,13 @@
 
 set -euo pipefail
 
+PYTHON=$(for cmd in python3 python py; do p=$(command -v "$cmd" 2>/dev/null) && "$p" -c "import sys; assert sys.version_info[0]==3" 2>/dev/null && echo "$p" && break; done)
+[ -z "$PYTHON" ] && exit 0
+
 INPUT=$(cat)
 
 parse() {
-  echo "$INPUT" | python3 -c "
+  echo "$INPUT" | $PYTHON -c "
 import sys, json
 d = json.load(sys.stdin)
 print(d.get('tool_input', {}).get('command', ''))
@@ -31,7 +34,7 @@ block() {
 }
 
 warn() {
-  python3 -c "
+  $PYTHON -c "
 import json, sys
 print(json.dumps({'continue': True, 'systemMessage': sys.argv[1]}))
 " "git-guard warning: $1"

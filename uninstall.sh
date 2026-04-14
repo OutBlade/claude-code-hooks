@@ -6,6 +6,7 @@ set -euo pipefail
 HOOKS_DEST="$HOME/.claude/hooks"
 SETTINGS="$HOME/.claude/settings.json"
 
+PYTHON=$(for cmd in python3 python py; do p=$(command -v "$cmd" 2>/dev/null) && "$p" -c "import sys; assert sys.version_info[0]==3" 2>/dev/null && echo "$p" && break; done)
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 
 ok()   { echo -e "${GREEN}  [ok]${NC} $1"; }
@@ -26,8 +27,8 @@ for hook in "${HOOKS[@]}"; do
 done
 
 # Remove hook entries from settings.json
-if [ -f "$SETTINGS" ]; then
-  python3 - <<'PYEOF'
+if [ -f "$SETTINGS" ] && [ -n "$PYTHON" ]; then
+  "$PYTHON" - <<'PYEOF'
 import json, os, shutil
 from datetime import datetime
 

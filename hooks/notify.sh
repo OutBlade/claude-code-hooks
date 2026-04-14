@@ -7,10 +7,13 @@
 
 set -euo pipefail
 
+PYTHON=$(for cmd in python3 python py; do p=$(command -v "$cmd" 2>/dev/null) && "$p" -c "import sys; assert sys.version_info[0]==3" 2>/dev/null && echo "$p" && break; done)
+[ -z "$PYTHON" ] && exit 0
+
 INPUT=$(cat)
 
 # Extract whether Claude stopped on its own vs being interrupted
-STOP_ACTIVE=$(echo "$INPUT" | python3 -c "
+STOP_ACTIVE=$(echo "$INPUT" | $PYTHON -c "
 import sys, json
 d = json.load(sys.stdin)
 print(str(d.get('stop_hook_active', False)).lower())
