@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 100" width="500" height="100">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 100" width="600" height="100">
   <defs>
     <style>
       .icon-path { fill: #e8630a; }
@@ -16,6 +16,6 @@
     <rect fill="#1a1a2e" x="40" y="53" width="4" height="6" rx="1"/>
   </g>
 
-  <!-- Text: icon ends ~90px, text starts at 105 -->
-  <text class="title" x="105" y="70">claude hooks</text>
+  <!-- textLength forces exact width regardless of which font the renderer uses -->
+  <text class="title" x="108" y="70" textLength="460" lengthAdjust="spacing">claude hooks</text>
 </svg>
